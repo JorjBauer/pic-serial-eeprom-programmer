@@ -1,5 +1,5 @@
 SCRIPT = /usr/local/share/gputils/lkr/16f627.lkr
-OBJECTS = globals.o i2c.o piceeprom.o
+OBJECTS = globals.o i2c.o piceeprom.o delay.o
 
 all:main.hex
 
@@ -21,8 +21,10 @@ install: main.hex
 
 globals.o: globals.asm globals.inc
 
-i2c.o: i2c.asm i2c.inc common.inc
+i2c.o: i2c.asm i2c.inc common.inc delay.inc
 
 piceeprom.o: piceeprom.asm piceeprom.inc common.inc
 
 main.o: main.asm common.inc
+
+delay.o: delay.asm delay.inc common.inc
