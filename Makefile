@@ -1,5 +1,5 @@
 SCRIPT = /usr/local/share/gputils/lkr/16f627.lkr
-OBJECTS = globals.o i2c.o piceeprom.o delay.o
+OBJECTS = globals.o i2c.o piceeprom.o delay.o serial.o
 
 all:main.hex
 
@@ -28,3 +28,5 @@ piceeprom.o: piceeprom.asm piceeprom.inc common.inc
 main.o: main.asm common.inc
 
 delay.o: delay.asm delay.inc common.inc
+
+serial.o: serial.asm serial.inc common.inc
