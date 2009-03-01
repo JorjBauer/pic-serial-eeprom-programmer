@@ -1,10 +1,10 @@
 SCRIPT = /usr/local/share/gputils/lkr/16f627.lkr
-OBJECTS = globals.o i2c.o piceeprom.o delay.o serial.o
+OBJECTS = globals.o i2c.o piceeprom.o delay.o serial.o commands.o
 
 all:main.hex
 
 main.hex:$(OBJECTS) main.o $(SCRIPT)
-	gplink --map -c -s $(SCRIPT) main.hex $(OBJECTS) main.o
+	gplink --map -c -s $(SCRIPT) -o main.hex $(OBJECTS) main.o
 
 testmain.hex:$(OBJECTS) testmain.o $(SCRIPT)
 	gplink --map -c -s $(SCRIPT) -o main.hex $(OBJECTS) testmain.o
@@ -30,3 +30,5 @@ main.o: main.asm common.inc
 delay.o: delay.asm delay.inc common.inc
 
 serial.o: serial.asm serial.inc common.inc
+
+commands.o: commands.asm commands.inc common.inc

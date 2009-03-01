@@ -21,4 +21,5 @@ temp2   res     1
 	
 bits	res     1
 
+	END
 	

@@ -1,8 +1,8 @@
-        Processor       16f628
+        Processor       16f627
         Radix           DEC
         EXPAND
 
-        include         "p16f628.inc"
+        include         "p16f627.inc"
         include         "common.inc"
 	include		"globals.inc"
 	include		"delay.inc"
@@ -23,9 +23,11 @@
 	GLOBAL	init_serial
 	GLOBAL	putch_usart
 	GLOBAL	getch_usart
+#if BITBANG_ENABLED
 	GLOBAL	getch
 	GLOBAL	getch_timeout
-
+#endif
+	
 ;;; ************************************************************************
 	udata
 loopcounter	res	1
@@ -38,7 +40,9 @@ timeout		res	3
 	code
 
 init_serial:
+#if BITBANG_ENABLED
 	bcf	bits, BIT_BITBANG_ACTIVITY
+#endif
 	
 	bsf	STATUS, RP0	; move to page 1
 	
@@ -101,10 +105,12 @@ putch_usart:
 ;;; * received, echo it back out the usart.
 ;;; ************************************************************************
 getch_usart:
+#if BITBANG_ENABLED
 	;; Test the bitbang interface. If the SERIALRX line is clear, then
 	;; we've got activity and should note that for future reference.
 	btfss	SERIALRX
 	bsf	bits, BIT_BITBANG_ACTIVITY
+#endif
 	
 	btfsc	RCSTA, OERR	; check for overrun
 	goto	overrun
@@ -136,6 +142,8 @@ overrun	bcf	RCSTA, CREN	; Clear overrun. Documented procedure: clear
 ;;; * Destroys:
 ;;; *    loopcounter, byte, i, arg1
 ;;; ************************************************************************
+
+#if BITBANG_ENABLED
 
 getch:
 	goto	getch_loop_start
@@ -186,7 +194,9 @@ gotresult:
 	bcf	STATUS, C	; no error, so clear the carry and return
 	bcf	STATUS, DC	; no framing error, so clear that too
 	return
-		
+
+#endif
+
 ;;; ************************************************************************
 ;;; * getch_timeout
 ;;; *
@@ -201,6 +211,8 @@ gotresult:
 ;;; * Destroys:
 ;;; *    loopcounter, byte, i, arg1
 ;;; ************************************************************************
+
+#if BITBANG_ENABLED
 
 getch_timeout:
 	bcf	bits, BIT_BITBANG_ACTIVITY ; clear the activity bit
@@ -297,5 +309,7 @@ getch_t_stopbit_loop:
 	goto	getch_t_stopbit_loop
 
 	goto	gotresult	; same as the blocking version from here on
+#endif
+	
 			
 	END

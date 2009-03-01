@@ -1,8 +1,8 @@
-	Processor	16f628
+	Processor	16f627
 	Radix		DEC
 	EXPAND
 
-	include		"p16f628.inc"
+	include		"p16f627.inc"
 	include		"common.inc"
 
 	GLOBAL	delay_ms

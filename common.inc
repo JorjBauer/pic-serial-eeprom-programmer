@@ -13,6 +13,11 @@
 #define SDAi    PORTB,4
 #define SDAo    PORTB,3
 
+#define BITBANG_ENABLED 0
+
+#define TRISA_DATA	0x00
+#define TRISB_DATA	0xB6
+
 ;;; *********************************************************************
 ;;; * Useful macros:
 ;;; *
