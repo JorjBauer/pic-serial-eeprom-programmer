@@ -7,6 +7,8 @@
 	include		"globals.inc"
 	include		"delay.inc"
 
+#define ECHO 0
+	
 ;;; ************************************************************************
 ;;; * This code assumes that the serial data is being buffered and inverted.
 ;;; * If the serial data is directly connected to an RS232 line (unbuffered),
@@ -17,7 +19,8 @@
 ;;; * clock speed is different, you'll need to twiddle the magic constants
 ;;; * (0xAA) to delay the right amount of time between bits.
 ;;; *
-;;; * Lastly, this code is 4800 Baud, 8/N/1.
+;;; * Lastly, the bit-banging code is 4800 Baud, 8/N/1. The USART version is
+;;; * 57600.
 ;;; ************************************************************************
 
 	GLOBAL	init_serial
@@ -45,8 +48,24 @@ init_serial:
 #endif
 	
 	bsf	STATUS, RP0	; move to page 1
+
+	;; Desired baud rate = Fosc / (64 * (X + 1))
+	;; e.g. 4800 = 10000000 / (64 * (X + 1))
+	;;      2083.333 = 64X + 64
+	;;      2019.333 = 64X
+	;;      X = 31.55 (use 32)
+	;; e.g. 57600 = 10000000 / (64 * (X + 1))
+	;;      173.61111111111111111111 = 64X + 64
+	;; 	109.61111111111111111111 = 64X
+	;; 	X = 1.7126 (too much error)
+	;; Others @ 10MHz:
+	;;    4800: 31.55 (verified, 32 works)
+	;;    9600: 15.28 (use 15; not tested)
+	;;    19200: 7.14 (use 7; works)
+	;;    38400: 3.07 (tried 3; not stable)
+	;;    57600: 1.7126 (not tested, seems unlikely to work)
 	
-	movlw	0x20		; 32 == baud rate of 4800 @ 10MHz
+	movlw	0x07		; 'X', per above comments, to set baud rate
 	movwf	SPBRG
 
 	bcf	TXSTA, CSRC	; unimportant
@@ -76,7 +95,7 @@ init_serial:
 
 	movlw	0x00
 	movwf	TXREG		; transmit dummy char to start transmitter
-	
+
 	return
 	
 ;;; ************************************************************************
@@ -111,7 +130,6 @@ getch_usart:
 	btfss	SERIALRX
 	bsf	bits, BIT_BITBANG_ACTIVITY
 #endif
-	
 	btfsc	RCSTA, OERR	; check for overrun
 	goto	overrun
 
@@ -119,9 +137,11 @@ getch_usart:
 	goto	getch_usart	; loop if not
 
         movfw	RCREG		; grab the received character
-	movwf	temp1		; save a copy
+#if ECHO
+	movwf	serial_temp1	; save a copy
 	call	putch_usart	; send a copy back out
-	movfw	temp1		; restore the saved copy
+	movfw	serial_temp1	; restore the saved copy
+#endif
 	return
 
 overrun	bcf	RCSTA, CREN	; Clear overrun. Documented procedure: clear

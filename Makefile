@@ -7,8 +7,7 @@ main.hex:$(OBJECTS) main.o $(SCRIPT)
 	gplink --map -c -s $(SCRIPT) -o main.hex $(OBJECTS) main.o
 
 testmain.hex:$(OBJECTS) testmain.o $(SCRIPT)
-	gplink --map -c -s $(SCRIPT) -o main.hex $(OBJECTS) testmain.o
-
+	gplink --map -c -s $(SCRIPT) -o testmain.hex $(OBJECTS) testmain.o
 
 %.o:%.asm
 	gpasm -c $<
@@ -17,7 +16,10 @@ clean:
 	rm -f *~ *.o *.lst *.map *.hex *.cod *.cof
 
 install: main.hex
-	picp /dev/ttyS0 16f627 -s -wd main.hex
+	picp /dev/tty.KeySerial1 16f627 -wc `./perl-flags-generator main.hex` -s -wp main.hex 
+
+installtest: testmain.hex
+	picp /dev/tty.KeySerial1 16f627 -wc `./perl-flags-generator testmain.hex` -s -wp testmain.hex 
 
 globals.o: globals.asm globals.inc
 
@@ -26,6 +28,8 @@ i2c.o: i2c.asm i2c.inc common.inc delay.inc
 piceeprom.o: piceeprom.asm piceeprom.inc common.inc
 
 main.o: main.asm common.inc
+
+testmain.o: testmain.asm common.inc
 
 delay.o: delay.asm delay.inc common.inc
 

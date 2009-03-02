@@ -55,60 +55,15 @@ Main:
 	movlw	0x07
 	movwf	CMCON
 	clrf	PORTA
+	movlw	0xFF		;debugging
+	movwf	PORTA
 	clrf	PORTB
 
-	bcf	STATUS, IRP	; indirect addressing to page 0/1, not 2/3
-
-	;; fixme: move this to the i2c init routine
-	movlw	0xFA		; 500mS for I2C gear to stabilize
-	call	delay_ms
-	movlw	0xFA
-	call	delay_ms
-
-	banksel	PORTA
-
-	;; initialization of subsystems
-	call	init_commands
-	call	init_serial
-
-	;; previous projects had problems with the first few serial chars
-	;; always being garbled. Send something to get the serial timing
-	;; set up properly.
-	movlw	0x0A
-	call	putch_usart
-	movlw	0x0D
-	call	putch_usart
-	movlw	0x0A
-	call	putch_usart
-	movlw	0x0D
-	call	putch_usart
-	movlw	'H'
-	call	putch_usart
-	movlw	'i'
-	call	putch_usart
-	movlw	0x0A
-	call	putch_usart
-	movlw	0x0D
-	call	putch_usart
-	movlw	0x0A
-	call	putch_usart
-	movlw	0x0D
-	call	putch_usart
-
-	clrf	serial_temp1	;debugging
-main_loop:
-	call	getch_usart	; Look for input from the serial port
-	movwf	temp2		;debugging
-	incf	serial_temp1	;debugging
-	movfw	serial_temp1	;debugging
-	movwf	PORTA		;debugging
-	movfw	temp2		;debugging
-	xorlw	'>'		; Is it the start of a command?
-	skpz
-	goto	main_loop	; No, so loop.
-
-	call	command_handler	; Go handle the command
-	goto	main_loop	; and loop again
+	movlw 0xFF
+loop:
+	movwf	PORTA
+	sublw	1
+	goto loop
 	
 
 	END

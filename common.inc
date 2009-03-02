@@ -8,15 +8,15 @@
 ;; output pin in question). See
 ;; http://www.sprut.de/electronic/pic/grund/i2c_soft.htm
 
-#define SCLi    PORTB,5
-#define SCLo    PORTB,0
-#define SDAi    PORTB,4
-#define SDAo    PORTB,3
+#define SCLi    PORTB,4
+#define SCLo    PORTB,6
+#define SDAi    PORTB,5
+#define SDAo    PORTB,7
 
 #define BITBANG_ENABLED 0
 
-#define TRISA_DATA	0x00
-#define TRISB_DATA	0xB6
+#define TRISA_DATA	0x00 ; all outputs
+#define TRISB_DATA	0x30 ; B[45] inputs; others outputs
 
 ;;; *********************************************************************
 ;;; * Useful macros:

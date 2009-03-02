@@ -5,7 +5,7 @@
         EXTERN  arg1
         EXTERN  arg2
 
-        EXTERN  temp1
+        EXTERN  serial_temp1
         EXTERN  temp2
 
 	EXTERN bits
