@@ -7,9 +7,21 @@
 	include		"globals.inc"
 	include		"delay.inc"
 
-#define ECHO 0
+;;; Define ECHO if you want characters to software-loopback to the sender
+;;; after being received. Good for testing.
 	
+#define ECHO 0
+
 ;;; ************************************************************************
+;;; *
+;;; * Serial code, version 0.2: 3/2/2009
+;;; *
+;;; * The bit-bang code here is untested. Notes from the pic-car system,
+;;; * from which I lifted this module (and improved it), say that the
+;;; * bit-bang interface had problems. YMMV.
+;;; *
+;;; * This code assumes that the big-bang data is buffered and inverted.
+;;; * 
 ;;; * This code assumes that the serial data is being buffered and inverted.
 ;;; * If the serial data is directly connected to an RS232 line (unbuffered),
 ;;; * then the sense of the RX and TX bits will be reverse (and the code
@@ -20,7 +32,7 @@
 ;;; * (0xAA) to delay the right amount of time between bits.
 ;;; *
 ;;; * Lastly, the bit-banging code is 4800 Baud, 8/N/1. The USART version is
-;;; * 57600.
+;;; * probably different; you'll have to look at init_serial.
 ;;; ************************************************************************
 
 	GLOBAL	init_serial
@@ -53,11 +65,13 @@ init_serial:
 	
 	bsf	STATUS, RP0	; move to page 1
 
-	;; double-check math: if TRISB doesn't have [21] on, the USART won't
-	;; function reliably.
-	;; FIXME. DO THAT.
+	;; The USART requires that bits [21] of TRISB are enabled, or you'll
+	;; get unpredictable results from it. Some PICs won't work at all,
+	;; and others will look like they're working but fail unpredictably.
+	bsf	TRISB, 2
+	bsf	TRISB, 1
 	
-	;; high-speed math:
+	;; high-speed port speed math:
 	;; Desired baud rate = Fosc / (16 * (X + 1))
 	;; e.g. 4800 = 10000000 / (16 * (X + 1))
 	;;      2083.333 = 16X + 16
@@ -78,10 +92,6 @@ init_serial:
 	;;      2083.333 = 64X + 64
 	;;      2019.333 = 64X
 	;;      X = 31.55 (use 32)
-	;; e.g. 57600 = 10000000 / (64 * (X + 1))
-	;;      173.61111111111111111111 = 64X + 64
-	;; 	109.61111111111111111111 = 64X
-	;; 	X = 1.7126 (too much error)
 	;; Others @ 10MHz:
 	;;    1200: 129.2
 	;;    2400: 64.1
@@ -91,6 +101,7 @@ init_serial:
 	;;    38400: 3.07 (tried 3; not stable)
 	;;    57600: 1.7126 (not tested, seems unlikely to work)
 	
+	bsf	TXSTA, BRGH	; high-speed mode if 'bsf'; low-speed for 'bcf'
 	movlw	0x40		; 'X', per above comments, to set baud rate
 	movwf	SPBRG
 
@@ -98,7 +109,6 @@ init_serial:
 	bcf	TXSTA, TX9	; 8-bit
 	bsf	TXSTA, TXEN	; enable transmit
 	bcf	TXSTA, SYNC	; async mode
-	bsf	TXSTA, BRGH	; high-speed serial mode
 	bcf	TXSTA, TX9D	; (unused, but we'll clear it anyway)
 	
 	bcf	STATUS, RP0	; back to page 0
@@ -171,12 +181,12 @@ getch_usart:
 	btfss	PIR1, RCIF	; make sure there's data to receive
 	goto	getch_usart	; loop if not
 
-framing_retry:	
+retry:	
         movfw	RCREG		; grab the received character
 
 	;; check for framing errors
 	btfsc	RCSTA, FERR
-	goto	framing_retry
+	goto	retry
 	
 #if ECHO
 	movwf	echo_buf	; save a copy
@@ -190,11 +200,6 @@ overrun	bcf	RCSTA, CREN	; Clear overrun. Documented procedure: clear
 	movfw	RCREG		; bytes (the size of the backing store), and
 	movfw	RCREG		; then re-enable CREN.
 	bsf	RCSTA, CREN
-
-	movfw	PORTA		;debugging: framing error? flash PORTA.
-	xorlw	0xFF		;debugging
-	movwf	PORTA		;debugging
-	
 	goto	getch_usart	; retry
 
 ;;; ************************************************************************
