@@ -72,6 +72,12 @@ handle_read:
 handle_test:
 	movlw	't'
 	call	putch_usart
+
+	clrf	arg1		; address low
+	movlw	0x00		; address high
+	call	i2c_read_byte
+	movwf	temp2		; hang on to this one for later
+	
 	clrf	arg1		; address high
 	clrf	arg2		; address low
 	movlw	0x00		; data
@@ -95,7 +101,15 @@ handle_test:
 	xorlw	0xFF		; == 0xFF?
 	skpz
 	goto test_fail
-	
+
+	;; put back the data we saw when we started. Note that this only
+	;; happens if we saw success; if the self-test failed, we may have
+	;; just corrupted memory location 0. Which is probably okay, given
+	;; that we failed the self-test anyway!
+	clrf	arg1		; address high
+	clrf	arg2		; address low
+	movfw	temp2		; data (saved from before)
+	call	i2c_write_byte
 	
 test_ok:	
 	movlw	'O'
