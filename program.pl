@@ -6,6 +6,14 @@ use Device::SerialPort;
 use Fcntl;
 use Carp;
 
+#############################
+# NOTES:
+#   fast_verify doesn't work.
+#
+#
+#############################
+
+
 $|=1;
 
 #my $dev = "/dev/tty.usbserial";
@@ -31,8 +39,8 @@ my $hshake = $port->handshake;
 print "$baud ${data}/${parity}/${stop} handshake: $hshake\n";
 
 #do_destructive_test($port);
-do_write($port, "file.bin");
-#do_verify($port, "file.bin");
+#do_write($port, "file.bin");
+do_verify($port, "file.bin");
 #do_fast_verify($port, "file.bin");
 
 $port->write_drain();
@@ -156,16 +164,27 @@ sub do_fast_verify {
 	$address++;
     }
 
+    my $len = $address-1;
+
     # Send a 'read all' command for that number of bytes
     my $s = length(@buf);
+
+    $s += 257; # debugging - loop off by one in .asm file
     
     die "Failed to write '>R'"
 	unless ($p->write('>R' . chr($s & 0xFF) . chr($s >> 8)) == 4);
 
+    my $ret = read_byte($p);
+    die "Test failed ('$ret' instead of 'R')"
+	unless ($ret eq 'R');
+
+    print "Fast-verifying $len bytes\n";
+
     $address = 0;
-    while ($address < length(@buf)) {
+    while ($address < $len) {
+	print ".";
 	my $ret = read_byte($p);
-	die "verification failed at byte $address"
+	die "verification failed at byte $address (want $buf[$address], got $ret)"
 	    unless ($ret eq chr($buf[$address]));
 	$address++;
     }
@@ -174,6 +193,8 @@ sub do_fast_verify {
 
 sub do_verify {
     my ($p, $file) = @_;
+
+    print "Verifying...\n";
 
     my $fh;
     open($fh, "file.bin") || die "Unable to open $file: $!";
@@ -186,8 +207,8 @@ sub do_verify {
     while ( sysread($fh, $buf, 1) ) {
 	print ".";
 	my $b = unpack('C', $buf); # $b is now the decimal value of the byte
+#	print sprintf("Address 0x%X: 0x%X\n", $address, $b);
 
-	print "sending read for address $address\n";
 	die "Failed to write '>r'"
 	    unless ($p->write('>r' . chr($address & 0xFF) . chr($address >> 8)) == 4);
 
@@ -195,11 +216,11 @@ sub do_verify {
 	die "failed to read 'read' command confirmation"
 	    unless ($ret[0] eq 'r' && $ret[1] eq '1');
 
-	print "have command confirmation, reading byte\n";
-
 	my $ret = read_byte($p);
-	die "failed to verify at address $address [want $buf, got $ret]"
-	    unless ($ret eq $buf);
+	die "failed to verify at address $address [want $buf ($b), got $ret]"
+	    unless ($ret eq chr($b));
+
+	$address++;
     }
 }
 
