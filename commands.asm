@@ -12,6 +12,8 @@
 ;;; *                            to denote failure or success, followed by
 ;;; *                            the data byte itself.
 ;;; *
+;;; * R <low_size> <high_size> : Read <size> bytes in one burst.
+;;; *
 ;;; * w <low_byte> <high_byte> <data> : write the byte <data> to the given
 ;;; *                                   address on the serial EEPROM. Will
 ;;; *                                   print a '0' or '1' to denote failure
@@ -58,58 +60,83 @@ handle_read:
 	call	getch_usart
 	movwf	arg1
 	call	getch_usart
+	;; leave the result in 'W'
 
-	call	i2c_read_byte	; W = i2c_read_byte(arg1, W)
+	call	i2c_read_byte	; W = i2c_read_byte(arg1[low], W[high])
 	movwf	temp2
 
 	movlw	'1'
 	call	putch_usart	; print '1' for success
-	movwf	temp2
+	movfw	temp2
 	call	putch_usart	; print the data byte from the eeprom
 	
 	return
 
+;;; ************************************************************************
+;;; * handle_read_all
+;;; *
+;;; * called in response to a '>R' command. Read in the two bytes of size,
+;;; * and print out that many bytes (starting at address 0). Note that sizes
+;;; * of 0 or larger than the EEPROM are invalid, and will generate
+;;; * unexpected (and undefined) results.
+;;; *
+;;; ************************************************************************
+
+handle_read_all:
+	movlw	'R'
+	call	putch_usart
+
+	call	getch_usart
+	movwf	temp2		; low byte count
+	call	getch_usart
+	movwf	temp3		; high byte count
+
+	;; read the first byte. It's special, as we have to set the address
+	;; counter using a different call than the rest of the work we're
+	;; about to perform.
+
+	clrf	arg1
+	movlw	0x00
+	call	i2c_read_byte
+	call	putch_usart
+
+redo:	
+	decfsz	temp2, F
+	goto	readnext_1
+	decfsz	temp3, F
+	goto	readnext_1
+	return
+
+readnext_1:
+	call	i2c_read_next_byte
+	call	putch_usart
+	goto	redo
+
+
+	
 handle_test:
 	movlw	't'
 	call	putch_usart
 
-	clrf	arg1		; address low
-	movlw	0x00		; address high
-	call	i2c_read_byte
-	movwf	temp2		; hang on to this one for later
-	
-	clrf	arg1		; address high
-	clrf	arg2		; address low
-	movlw	0x00		; data
-	call	i2c_write_byte
+	movlw	0xFF
+	movwf	temp3
 
-	clrf	arg1		; address low
-	movlw	0x00		; address high
-	call	i2c_read_byte
-	xorlw	0x00		; == 0x00?
+keep_testing:	
+	clrf	arg1
+	movfw	temp3
+	movwf	arg2
+	call	i2c_write_byte	; address 0x00 0x(temp3) = temp3
+
+	movfw	temp3
+	movwf	arg1
+	movlw	0x00
+	call	i2c_read_byte	; address 0x00 0x(temp3)
+	xorwf	temp3, W
 	skpz
-	goto test_fail
+	goto	test_fail
 
-	clrf	arg1		; address high
-	clrf	arg2		; address low
-	movlw	0xFF		; data
-	call	i2c_write_byte
-
-	clrf	arg1		; address low
-	movlw	0x00		; address high
-	call	i2c_read_byte
-	xorlw	0xFF		; == 0xFF?
-	skpz
-	goto test_fail
-
-	;; put back the data we saw when we started. Note that this only
-	;; happens if we saw success; if the self-test failed, we may have
-	;; just corrupted memory location 0. Which is probably okay, given
-	;; that we failed the self-test anyway!
-	clrf	arg1		; address high
-	clrf	arg2		; address low
-	movfw	temp2		; data (saved from before)
-	call	i2c_write_byte
+	decfsz	temp3, F
+	goto	keep_testing
 	
 test_ok:	
 	movlw	'O'
@@ -146,8 +173,9 @@ handle_write:
 	call	getch_usart
 	movwf	arg1
 	call	getch_usart
+	;; leave the value in 'W'
 
-	call	i2c_write_byte	; i2c_write_byte( arg1, arg2, W )
+	call	i2c_write_byte	; i2c_write_byte( arg1[high], arg2[low], W )
 
 	movlw	'1'		; echo '1' for success
 	call	putch_usart

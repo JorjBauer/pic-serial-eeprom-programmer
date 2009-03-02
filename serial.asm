@@ -38,6 +38,10 @@ byte		res	1
 i		res	1
 
 timeout		res	3
+
+#if ECHO
+echo_buf	res	1
+#endif
 	
 ;;; ************************************************************************
 	code
@@ -49,6 +53,26 @@ init_serial:
 	
 	bsf	STATUS, RP0	; move to page 1
 
+	;; double-check math: if TRISB doesn't have [21] on, the USART won't
+	;; function reliably.
+	;; FIXME. DO THAT.
+	
+	;; high-speed math:
+	;; Desired baud rate = Fosc / (16 * (X + 1))
+	;; e.g. 4800 = 10000000 / (16 * (X + 1))
+	;;      2083.333 = 16X + 16
+	;;      2067.333 = 16X
+	;;      X = 129.2 (use 129)
+	;; other values @ 10MHz clock:
+	;; 4800: X = 129 (129.2)
+	;; 9600: X = 64 (64.104)
+	;; 19200: X = 31.55 (works @ 32)
+	;; 38400: X = 15.27 (not usable)
+	;; 57600: X = 9.85
+	;; 115200: 4.43
+	;; 230400: 1.7127
+
+	;; low-speed math:
 	;; Desired baud rate = Fosc / (64 * (X + 1))
 	;; e.g. 4800 = 10000000 / (64 * (X + 1))
 	;;      2083.333 = 64X + 64
@@ -59,20 +83,22 @@ init_serial:
 	;; 	109.61111111111111111111 = 64X
 	;; 	X = 1.7126 (too much error)
 	;; Others @ 10MHz:
+	;;    1200: 129.2
+	;;    2400: 64.1
 	;;    4800: 31.55 (verified, 32 works)
 	;;    9600: 15.28 (use 15; not tested)
 	;;    19200: 7.14 (use 7; works)
 	;;    38400: 3.07 (tried 3; not stable)
 	;;    57600: 1.7126 (not tested, seems unlikely to work)
 	
-	movlw	0x07		; 'X', per above comments, to set baud rate
+	movlw	0x40		; 'X', per above comments, to set baud rate
 	movwf	SPBRG
 
 	bcf	TXSTA, CSRC	; unimportant
 	bcf	TXSTA, TX9	; 8-bit
 	bsf	TXSTA, TXEN	; enable transmit
 	bcf	TXSTA, SYNC	; async mode
-	bcf	TXSTA, BRGH	; low-speed serial mode
+	bsf	TXSTA, BRGH	; high-speed serial mode
 	bcf	TXSTA, TX9D	; (unused, but we'll clear it anyway)
 	
 	bcf	STATUS, RP0	; back to page 0
@@ -109,12 +135,21 @@ init_serial:
 ;;; * FIXME: assumes 'byte' is in page 0, same as SERIALTX
 ;;; ************************************************************************
 putch_usart:
+	;; Check TRMT: is *everything* empty?
+	bsf	STATUS, RP0
+putch_block:	
+	btfss	TXSTA, TRMT
+	goto	putch_block
+	bcf	STATUS, RP0
+	
+	;; Check TXIF: is TXREG empty (but not necessarily TSR)?
 	btfss	PIR1, TXIF
-	goto	putch_usart	; wait for transmitter interrupt flag
+	goto	putch_usart
 
 	;; All clear. Now transmit.
 		
 	movwf	TXREG
+	
 	return
 
 ;;; ************************************************************************
@@ -130,17 +165,23 @@ getch_usart:
 	btfss	SERIALRX
 	bsf	bits, BIT_BITBANG_ACTIVITY
 #endif
-	btfsc	RCSTA, OERR	; check for overrun
-	goto	overrun
+ 	btfsc	RCSTA, OERR	; check for overrun
+ 	goto	overrun
 
 	btfss	PIR1, RCIF	; make sure there's data to receive
 	goto	getch_usart	; loop if not
 
+framing_retry:	
         movfw	RCREG		; grab the received character
+
+	;; check for framing errors
+	btfsc	RCSTA, FERR
+	goto	framing_retry
+	
 #if ECHO
-	movwf	serial_temp1	; save a copy
+	movwf	echo_buf	; save a copy
 	call	putch_usart	; send a copy back out
-	movfw	serial_temp1	; restore the saved copy
+	movfw	echo_buf	; restore the saved copy
 #endif
 	return
 
@@ -149,6 +190,11 @@ overrun	bcf	RCSTA, CREN	; Clear overrun. Documented procedure: clear
 	movfw	RCREG		; bytes (the size of the backing store), and
 	movfw	RCREG		; then re-enable CREN.
 	bsf	RCSTA, CREN
+
+	movfw	PORTA		;debugging: framing error? flash PORTA.
+	xorlw	0xFF		;debugging
+	movwf	PORTA		;debugging
+	
 	goto	getch_usart	; retry
 
 ;;; ************************************************************************

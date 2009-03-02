@@ -16,7 +16,7 @@
 #define BITBANG_ENABLED 0
 
 #define TRISA_DATA	0x00 ; all outputs
-#define TRISB_DATA	0x30 ; B[45] inputs; others outputs
+#define TRISB_DATA	0x36 ; B[45] inputs; others outputs. B[21] USART.
 
 ;;; *********************************************************************
 ;;; * Useful macros:

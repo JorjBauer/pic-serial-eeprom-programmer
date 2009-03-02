@@ -5,8 +5,8 @@
         EXTERN  arg1
         EXTERN  arg2
 
-        EXTERN  serial_temp1
         EXTERN  temp2
+	EXTERN	temp3
 
 	EXTERN bits
 ;; Is there a bit-bang operation in progress?

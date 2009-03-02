@@ -6,8 +6,8 @@
 	
 	GLOBAL  arg1
 	GLOBAL  arg2
-	GLOBAL  serial_temp1
 	GLOBAL  temp2
+	GLOBAL	temp3
 
 	GLOBAL  bits
 	
@@ -16,8 +16,8 @@
 arg1    res     1
 arg2    res     1
 
-serial_temp1   res     1
 temp2   res     1
+temp3	res	1
 	
 bits	res     1
 

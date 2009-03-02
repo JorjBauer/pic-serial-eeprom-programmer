@@ -95,14 +95,9 @@ Main:
 	movlw	0x0D
 	call	putch_usart
 
-	clrf	serial_temp1	;debugging
 main_loop:
 	call	getch_usart	; Look for input from the serial port
-	movwf	temp2		;debugging
-	incf	serial_temp1	;debugging
-	movfw	serial_temp1	;debugging
-	movwf	PORTA		;debugging
-	movfw	temp2		;debugging
+	
 	xorlw	'>'		; Is it the start of a command?
 	skpz
 	goto	main_loop	; No, so loop.
