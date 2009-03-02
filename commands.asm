@@ -197,6 +197,12 @@ command_handler:
 	goto	handle_read
 
 	movfw	temp2
+	xorlw	'R'
+	skpnz
+	goto	handle_read_all
+
+
+	movfw	temp2
 	xorlw	'w'		; write command?
 	skpnz
 	goto	handle_write
