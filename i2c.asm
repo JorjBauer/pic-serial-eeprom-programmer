@@ -7,6 +7,7 @@
 	include		"globals.inc"
 	include		"delay.inc"
 
+	GLOBAL	i2c_init
 	GLOBAL	i2c_write_byte
 	GLOBAL	i2c_read_byte
 	GLOBAL	i2c_read_next_byte
@@ -20,6 +21,13 @@ addr_low	res	1
 	
 ;;; ************************************************************************
 	code
+
+i2c_init:
+	movlw   0xFA	; 500mS for I2C gear to stabilize
+	call    delay_ms
+	movlw   0xFA
+	call    delay_ms
+	return
 	
 ;;; ************************************************************************
 ;;; * i2c_on

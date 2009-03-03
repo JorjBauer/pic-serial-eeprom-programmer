@@ -39,8 +39,9 @@ my $hshake = $port->handshake;
 print "$baud ${data}/${parity}/${stop} handshake: $hshake\n";
 
 #do_destructive_test($port);
-do_write($port, "file.bin");
-do_verify($port, "file.bin");
+do_download($port, "out.bin");
+#do_write($port, "file.bin");
+#do_verify($port, "file.bin");
 #do_fast_verify($port, "file.bin");
 
 $port->write_drain();
@@ -190,6 +191,41 @@ sub do_fast_verify {
     }
     print "fast-verify complete\n";
 }
+
+sub do_download {
+    my ($p, $file) = @_;
+
+    my ($p, $file) = @_;
+
+    print "Downloading...\n";
+
+    my $fh;
+    open($fh, ">$file") || die "Unable to open $file: $!";
+
+    $p->purge_all();
+
+    my $address = 0;
+    while ($address < 0x4000) {
+	print sprintf("address: 0x%X\n", $address);
+	die "Failed to write '>r'"
+	    unless ($p->write('>r' . chr($address & 0xFF) . chr($address >> 8)) == 4);
+
+	my $ret = read_byte($p);
+	die "expected 'r', got '$ret'"
+	    unless ($ret eq 'r');
+
+	$ret = read_byte($p);
+	die "expected '1', got '$ret'"
+	    unless ($ret eq '1');
+
+	$ret = read_byte($p);
+	print $fh $ret;
+
+	$address++;
+    }
+    close $fh;
+}
+
 
 sub do_verify {
     my ($p, $file) = @_;

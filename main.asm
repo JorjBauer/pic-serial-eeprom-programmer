@@ -59,17 +59,12 @@ Main:
 
 	bcf	STATUS, IRP	; indirect addressing to page 0/1, not 2/3
 
-	;; fixme: move this to the i2c init routine
-	movlw	0xFA		; 500mS for I2C gear to stabilize
-	call	delay_ms
-	movlw	0xFA
-	call	delay_ms
-
 	banksel	PORTA
 
 	;; initialization of subsystems
-	call	init_commands
+	call	init_i2c
 	call	init_serial
+	call	init_commands
 
 	;; previous projects had problems with the first few serial chars
 	;; always being garbled. Send something to get the serial timing

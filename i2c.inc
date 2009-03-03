@@ -1,3 +1,5 @@
+	EXTERN	i2c_init
+
 	;; i2c_write_byte: random access single-byte write
 	;;    arg1: high byte addr
 	;;    arg2: low byte addr
