@@ -14,7 +14,9 @@
 	include		"commands.inc"
 
 	__CONFIG ( _BODEN_ON & _CP_OFF & _DATA_CP_OFF & _PWRTE_ON & _WDT_OFF & _LVP_OFF & _MCLRE_OFF & _HS_OSC )
-
+	;; _HS_OSC = 10MHz external ceramic resonator
+	;; _INTRC_OSC_NOCLKOUT = 4MHz (nominal) internal oscillator
+	
 	;; 3FFF & 3FFF & 3FFF & 3FF7 & 3FFB & 3F7F & 3FDF & 3FEE
 	
 	
@@ -45,6 +47,10 @@ Main:
 
 	bcf	STATUS, RP1
 	bsf	STATUS, RP0	; set up page 1 registers
+	
+	bsf	PCON, 3		; for INTOSC, set speed to 4 MHz. Benign
+				; in any other mode.
+	
 	bsf	OPTION_REG, NOT_RBPU
 	movlw	TRISA_DATA	; set up input/output pins appropriately
 	movwf	TRISA
@@ -62,7 +68,7 @@ Main:
 	banksel	PORTA
 
 	;; initialization of subsystems
-	call	init_i2c
+	call	i2c_init
 	call	init_serial
 	call	init_commands
 
