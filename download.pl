@@ -194,18 +194,16 @@ sub do_fast_verify {
 
 sub do_download {
     my ($p, $file) = @_;
-
-    my ($p, $file) = @_;
-
     print "Downloading...\n";
 
     my $fh;
     open($fh, ">$file") || die "Unable to open $file: $!";
+    select($fh); $|=1; select(STDOUT);
 
     $p->purge_all();
 
     my $address = 0;
-    while ($address < 0x4000) {
+    while ($address < 0x8000) {
 	print sprintf("address: 0x%X\n", $address);
 	die "Failed to write '>r'"
 	    unless ($p->write('>r' . chr($address & 0xFF) . chr($address >> 8)) == 4);
