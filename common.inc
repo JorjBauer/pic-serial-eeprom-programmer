@@ -4,7 +4,7 @@
 
 ;; I2C serial clock and data. Two pins for each function for the sake of 
 ;; software simplicity. The 'input' pins are directly connected, and the 
-;; 'output' pins (SDAo, SCLo) are connected via diodes (anode toward the
+;; 'output' pins (SDAo, SCLo) are connected via diodes (cathode toward the
 ;; output pin in question). See
 ;; http://www.sprut.de/electronic/pic/grund/i2c_soft.htm
 
