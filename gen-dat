@@ -1,0 +1,18 @@
+#!/usr/bin/perl
+
+my $dat = 0;
+my $fh;
+open($fh, ">file.bin")
+	  || die "failed";
+
+my $addy = 0;
+while ($addy < 0x8000) {
+      print $fh chr($dat);
+      $dat++;
+      $dat = 0
+	  if ($dat == 256);
+      $dat++
+	  if ($addy % 256 == 0);
+
+      $addy++;
+}
