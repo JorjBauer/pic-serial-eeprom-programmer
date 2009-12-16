@@ -17,7 +17,8 @@ use Carp;
 $|=1;
 
 #my $dev = "/dev/tty.usbserial";
-my $dev = "/dev/tty.KeySerial1";
+#my $dev = "/dev/tty.KeySerial1";
+my $dev = "/dev/tty.PL2303-0000101D";
 
 # Set up the serial port
 my $quiet = 1;
