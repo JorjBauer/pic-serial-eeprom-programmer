@@ -315,7 +315,6 @@ welcome_msg:
 ;;; ************************************************************************
 
 Main:
-	clrwdt
 	clrf	INTCON		; turn off interrupts
 
 	bcf	STATUS, RP1
