@@ -13,6 +13,15 @@
 	GLOBAL	i2c_read_next_byte
 
 ;;; ************************************************************************
+;;; Some of this code originally came from
+;;;    http://www.sprut.de/electronic/pic/grund/i2c_soft.htm
+;;; ... which does not mention license terms. I have subsequently abandoned
+;;; this approach to I2C, which requires extra diodes that just aren't
+;;; necessary. See my pic-lamp project's i2c implementation for something 
+;;; with better (lesser) hardware requirements.
+;;; ************************************************************************
+	
+;;; ************************************************************************
 	udata
 count		res	1
 ee_data		res	1
