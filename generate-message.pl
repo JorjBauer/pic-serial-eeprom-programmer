@@ -4,7 +4,7 @@ my $msg = qq{
 
 SerEE v1.1
 Cmds:
->rXX  read 1 byte @ address XX (2 bytes, big-endian)
+>rXX  read 1 byte @ address XX (2 bytes, ltl-endian)
       retns r1Y on success (Y is binary result byte)
 >wXXY write value Y @ address XX
       retns w1 on success
