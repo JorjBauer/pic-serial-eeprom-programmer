@@ -36,3 +36,16 @@
 #define skpwgt  skpnc
 #define SKPWLE SKPC
 #define skpwle skpc
+
+;;; * fcall <subroutine>
+;;; *
+;;; * sets up pagesel appropriately for subroutine (using 'lcall'), and 
+;;; * sets pagesel properly on return. Note that gpasm will properly 
+;;; * do nothing on a 16f628a, which has only one page. This may also be 
+;;; * true of other processors and compilers but is unconfirmed.
+;;; *
+fcall macro subroutine_name
+      local dummy_fcall
+      lcall subroutine_name
+      pagesel $
+      endm

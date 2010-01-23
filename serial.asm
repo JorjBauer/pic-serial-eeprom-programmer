@@ -1,8 +1,5 @@
-        Processor       16f627
-        Radix           DEC
-        EXPAND
+        include         "processor_def.inc"
 
-        include         "p16f627.inc"
         include         "common.inc"
 	include		"globals.inc"
 	include		"delay.inc"
@@ -102,7 +99,7 @@ init_serial:
 	;;    57600: 1.7126 (not tested, seems unlikely to work)
 	
 	bsf	TXSTA, BRGH	; high-speed mode if 'bsf'; low-speed for 'bcf'
-	movlw	0x40		; 'X', per above comments, to set baud rate
+	movlw	d'26'		; 'X', per above comments, to set baud rate
 	movwf	SPBRG
 
 	bcf	TXSTA, CSRC	; unimportant

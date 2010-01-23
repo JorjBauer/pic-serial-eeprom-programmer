@@ -1,19 +1,17 @@
-	Processor	16f627
-	Radix		DEC
-	EXPAND
+        include         "processor_def.inc"
 
-	include		"p16f627.inc"
 	include		"common.inc"
 	include		"globals.inc"
 
-	include		"i2c.inc"
+	include		"seree.inc"
 	include		"serial.inc"
+	include		"serbuf.inc"
 	include		"piceeprom.inc"
 
 	include		"delay.inc"
 	include		"commands.inc"
 
-	__CONFIG ( _BODEN_ON & _CP_OFF & _DATA_CP_OFF & _PWRTE_ON & _WDT_OFF & _LVP_OFF & _MCLRE_OFF & _HS_OSC )
+	__CONFIG ( _BODEN_ON & _CP_OFF & _DATA_CP_OFF & _PWRTE_ON & _WDT_OFF & _LVP_OFF & _MCLRE_OFF & _INTRC_OSC_NOCLKOUT )
 	;; _HS_OSC = 10MHz external ceramic resonator
 	;; _INTRC_OSC_NOCLKOUT = 4MHz (nominal) internal oscillator
 	
@@ -27,7 +25,13 @@ _InitVector	set	0x04
 	udata
 	
 ptr	res	1		; memory pointer for welcome message
-        	
+
+	udata_shr
+save_w		res	1
+save_status	res	1
+save_pclath	res	1
+save_fsr	res	1
+	
 ;;; ************************************************************************
 	code
 
@@ -35,6 +39,34 @@ ptr	res	1		; memory pointer for welcome message
 	lgoto	Main
 
 	ORG	_InitVector
+	nop
+
+	ORG	0x05
+Interrupt:
+;;; ; standard interrupt setup: save everything!
+	movwf   save_w
+	swapf   STATUS, W
+	movwf   save_status
+	bcf     STATUS, RP1
+	bcf     STATUS, RP0
+	movf    PCLATH, W
+	movwf   save_pclath
+	clrf    PCLATH
+	movfw   FSR
+	movwf   save_fsr
+	
+	SERBUF_INTERRUPT
+	
+;;;  clean up everything we saved...
+	movfw   save_fsr
+	movwf   FSR
+	movf    save_pclath, W
+	movwf   PCLATH
+	swapf   save_status, W
+	movwf   STATUS
+	swapf   save_w, F
+	swapf   save_w, W
+	
 	retfie
 
 ;;; ************************************************************************
@@ -61,7 +93,7 @@ welcome_msg:
 	retlw	'v'
 	retlw	'1'
 	retlw	'.'
-	retlw	'1'
+	retlw	'2'
 	retlw	0x0A
 	retlw	0x0D
 	retlw	'C'
@@ -340,8 +372,9 @@ Main:
 	banksel	PORTA
 
 	;; initialization of subsystems
-	call	i2c_init
+	call	seree_init
 	call	init_serial
+	SERBUF_INIT	
 	call	init_commands
 
 	;; previous projects had problems with the first few serial chars
@@ -358,22 +391,22 @@ repeat_welcome:
 	addlw	0
 	skpnz
 	goto	done_welcome
-	lcall	putch_usart
+	lcall	putch_usart_buffered
 	incfsz	ptr, F
 	goto	repeat_welcome
 done_welcome:
 
 	movlw	'G'
-	lcall	putch_usart
+	lcall	putch_usart_buffered
 	movlw	'o'
-	lcall	putch_usart
+	lcall	putch_usart_buffered
 	movlw	0x0A
-	lcall	putch_usart
+	lcall	putch_usart_buffered
 	movlw	0x0D
-	lcall	putch_usart
+	lcall	putch_usart_buffered
 	
 main_loop:
-	call	getch_usart	; Look for input from the serial port
+	call	getch_usart_buffered	; Look for input from the serial port
 	
 	xorlw	'>'		; Is it the start of a command?
 	skpz

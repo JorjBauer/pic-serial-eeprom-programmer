@@ -1,12 +1,9 @@
-	Processor	16f627
-	Radix		DEC
-	EXPAND
+        include         "processor_def.inc"
 
-	include		"p16f627.inc"
 	include		"common.inc"
 	include		"globals.inc"
 
-	include		"i2c.inc"
+	include		"seree.inc"
 	include		"serial.inc"
 	include		"piceeprom.inc"
 
