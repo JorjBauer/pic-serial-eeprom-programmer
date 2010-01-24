@@ -8,9 +8,6 @@ all:main.hex
 main.hex:$(OBJECTS) main.o $(SCRIPT)
 	gplink --map -c -s $(SCRIPT) -o main.hex $(OBJECTS) main.o
 
-testmain.hex:$(OBJECTS) testmain.o $(SCRIPT)
-	gplink --map -c -s $(SCRIPT) -o testmain.hex $(OBJECTS) testmain.o
-
 %.o:%.asm
 	gpasm -c $<
 
@@ -20,16 +17,11 @@ clean:
 install: main.hex
 	picp $(SERIAL) 16f627 -wc `./perl-flags-generator main.hex` -s -wp main.hex 
 
-installtest: testmain.hex
-	picp $(SERIAL) 16f627 -wc `./perl-flags-generator testmain.hex` -s -wp testmain.hex 
-
 globals.o: globals.asm globals.inc processor_def.inc
 
 piceeprom.o: piceeprom.asm piceeprom.inc common.inc processor_def.inc
 
 main.o: main.asm common.inc processor_def.inc
-
-testmain.o: testmain.asm common.inc processor_def.inc
 
 delay.o: delay.asm delay.inc common.inc processor_def.inc
 
