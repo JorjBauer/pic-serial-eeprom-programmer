@@ -1,5 +1,0 @@
-The serial line is 9600 baud - but the speed of the transfer will be
-limited by the I2C bus. This code uses the slowest possible read and
-write operations, as they're the simplest to implement and the most
-likely to work on the widest variety of devices. So programming a
-256Kb (32KB) 24LC256 takes about 6 minutes, 16 seconds.
