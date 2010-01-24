@@ -69,8 +69,6 @@ I2C_START       MACRO
 
 I2C_STOP        MACRO           ;assumes SCL high on entry
         bcf     SDA
-        ;;nop
-        ;;nop
 	I2CDELAY
         SET_BANK1
         bsf     SCLTRIS
@@ -101,7 +99,7 @@ I2C_w_loop:
 	SET_BANK1
 	bsf	SCLTRIS	; SCL is now an input (float high)
 	SET_BANK0
-	btfss	SCL	; wait until clock goes high
+	btfss	SCL	; wait until clock goes high [honor clock stretching]
 	goto	$-1
 
 	SET_BANK1
@@ -112,7 +110,8 @@ I2C_w_loop:
 	decfsz	I2CCOUNT, F
 	goto	I2C_w_loop
 
-	; done writing 8 bits. Wait for bus to agree with our state...
+	; done writing 8 bits. Read the ACK bit, and return in Z for the caller.
+
 	SET_BANK1
 	bsf	SDATRIS	; set as an input (float high)
 	bsf	SCLTRIS	; set as an input (float high)
@@ -121,6 +120,10 @@ I2C_w_loop:
 	goto	$-1	; wait until it floats
 
 	I2CDELAY
+
+	bcf	OPTION_REG, Z	; clear Z (assume NAK)
+	btfsc	SDA
+	bsf	OPTION_REG, Z	; set Z (it's ACK)
 	
 	SET_BANK1
 	bcf	SDATRIS	; set as an output
@@ -134,7 +137,7 @@ I2C_w_loop:
 	;; ---- Read I2C into W  ----
 read_I2C:
 	SET_BANK1
-	bsf	SDATRIS
+	bsf	SDATRIS		; input (float high)
 	SET_BANK0
 
 	movlw	08h		; send 8 bits
@@ -142,27 +145,32 @@ read_I2C:
 
 	bcf	SCL		; clock data out
 	SET_BANK1
-	bcf	SCLTRIS
+	bcf	SCLTRIS		; set as output
 	SET_BANK0
 
-	clrf	I2CTMP		; clear var
-	rlf	I2CTMP, 1		; rotate carry in
-	clrf	I2CTMP		; clear var again
+	bcf	STATUS, C	; clear carry
+	clrf	I2CTMP		; clear return value (which we'll now read)
 
 I2C_read_loop:
-	rlf	I2CTMP, 1
+	rlf	I2CTMP, F	; shift result left, and shift on a 0 from C
 
 	SET_BANK1
-	bsf	SCLTRIS
+	bsf	SCLTRIS		; float high
 	SET_BANK0
+	; wait for SCL to go high (client may be bit-stretching, holding low)
+	btfss  SCL
+	goto   $-1
+	; Might need a delay here for fast processors?
 
+	; now read in the bit
 	btfsc	SDA
 	bsf	I2CTMP, 0		; if data out = 1, set bit
 
-	bcf	SCL
+	bcf	SCL			; assert SCL = 0
 	SET_BANK1
-	bcf	SCLTRIS
+	bcf	SCLTRIS			; SCL is an output
 	SET_BANK0
+
 	decfsz	I2CCOUNT, 1
 	goto	I2C_read_loop
 
@@ -182,7 +190,6 @@ ack:
 	SET_BANK1
 	bsf	SCLTRIS
 	SET_BANK0
-	;;nop
 	I2CDELAY
 	bcf	SCL
 	SET_BANK1
