@@ -121,7 +121,7 @@ sub do_write {
 	$ret = read_byte($p);
 	die (sprintf "failed to validate byte at address $address [%d vs $b]",
 	ord($ret))
-	    unless ($ret eq chr($b));
+	    unless (ord($ret) == $b);
 
 	$address++;
     }
@@ -201,8 +201,8 @@ sub do_fast_verify {
 	    print ".";
 	}
 	my $ret = read_byte($p);
-	die "verification failed at byte $address (want $buf[$address], got $ret)"
-	    unless ($ret eq chr($buf[$address]));
+	die ("verification failed at byte $address (want $buf[$address], got ".ord($ret).")")
+	    unless (ord($ret) == $buf[$address]);
 	$address++;
     }
     print "fast-verify complete\n";
@@ -301,7 +301,7 @@ sub do_verify {
 
 	my $ret = read_byte($p);
 	die "failed to verify at address $address [want $buf ($b), got $ret]"
-	    unless ($ret eq chr($b));
+	    unless (ord($ret) == $b);
 
 	$address++;
     }
