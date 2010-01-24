@@ -75,9 +75,12 @@ seree_write_byte:
 	movfw	arg2
 	movwf	addr_low
 
+_retry_write:	
 	call	i2c_start
 	movlw	0xA0		; %1010xxxy I2C device address (xxx == id)
 	call	write_I2C
+	btfsc	OPTION_REG, Z	; did it NAK?
+	goto	_retry_write	; yes, NAK - loop
 	movfw	addr_high
 	call	write_I2C
 	movfw	addr_low
@@ -86,17 +89,6 @@ seree_write_byte:
 	call	write_I2C
 	call	i2c_stop
 
-#if 0
-	;;  wait for clock line to come back up?
-	bsf     SCLo
-i2c_write_loop:
-	btfss   SCLo
-	goto    i2c_write_loop
-#endif
-
-	movlw	3
-	call	delay_ms
-	
 	return
 
 ;;; ************************************************************************
@@ -137,18 +129,14 @@ seree_read_byte:
 	movfw	arg1
 	movwf	addr_low
 
-        goto    $+1
-	goto    $+1
-	goto    $+1
-	goto    $+1
-	goto    $+1
-	goto    $+1
-	goto    $+1
-	goto    $+1
 
+_retry_read:	
 	call	i2c_start
 	movlw	0xA0		; %1010xxxy I2C address (xxx == id)
 	call	write_I2C
+	btfsc	OPTION_REG, Z	; did it NAK?
+	goto	_retry_read	; yes, NAK - loop
+	
 	movfw	addr_high
 	call	write_I2C
 	movfw	addr_low
