@@ -16,6 +16,9 @@ getopts('d:hf:qrRtwvV');
 # Must have a serial port.
 usage() if ($opt_h || !$opt_d);
 
+# Must have at least one operation.
+usage() unless ($opt_r || $opt_R || $opt_w || $opt_v || $opt_V || $opt_t);
+
 # Can't mix download and upload operations
 usage() if ( ($opt_r || $opt_R) && ($opt_w) );
 
@@ -32,18 +35,23 @@ if ($opt_t) {
     do_destructive_test($port);
 }
 if ($opt_r) {
+    usage() unless ($opt_f);
     do_download($port, $opt_f);
 }
 if ($opt_R) {
+    usage() unless ($opt_f);
     do_fast_download($port, $opt_f);
 }
 if ($opt_w) {
+    usage() unless ($opt_f);
     do_write($port, $opt_f);
 }
 if ($opt_v) {
+    usage() unless ($opt_f);
     do_verify($port, $opt_f);
 }
 if ($opt_V) {
+    usage() unless ($opt_f);
     do_fast_verify($port, $opt_f);
 }
 
@@ -63,11 +71,16 @@ sub do_destructive_test {
     my $ret = read_byte($p);
     die "Test failed ('$ret' instead of 't')"
 	unless ($ret eq 't');
+    foreach my $i (0 .. 254) {
+	$ret = read_byte($p);
+	die "Test failed [$ret, $i]"
+	    unless ($ret eq '.');
+    }
     $ret = read_byte($p);
-    die "Test failed"
+    die "Test failed [$ret]"
 	unless ($ret eq 'O');
     $ret = read_byte($p);
-    die "Test failed"
+    die "Test failed [$ret]"
 	unless ($ret eq 'K');
 
     print "Self-test passed\n";
@@ -171,10 +184,8 @@ sub do_fast_verify {
     my $len = $address-1;
 
     # Send a 'read all' command for that number of bytes
-    my $s = length(@buf);
+    my $s = scalar @buf;
 
-    $s += 257; # debugging - loop off by one in .asm file
-    
     die "Failed to write '>R'"
 	unless ($p->write('>R' . chr($s & 0xFF) . chr($s >> 8)) == 4);
 
@@ -186,7 +197,9 @@ sub do_fast_verify {
 
     $address = 0;
     while ($address < $len) {
-	print ".";
+	if ($address % 256 == 0) {
+	    print ".";
+	}
 	my $ret = read_byte($p);
 	die "verification failed at byte $address (want $buf[$address], got $ret)"
 	    unless ($ret eq chr($buf[$address]));
@@ -233,7 +246,7 @@ sub do_download {
     print "Downloading...\n";
 
     my $fh;
-    open($fh, ">$file") || die "Unable to open $file: $!";
+    open($fh, ">", $file) || die "Unable to open $file: $!";
     select($fh); $|=1; select(STDOUT);
 
     $p->purge_all();
@@ -275,7 +288,7 @@ sub do_verify {
     my $buf;
 
     while ( sysread($fh, $buf, 1) ) {
-	print ".";
+	print sprintf("address: 0x%X\n", $address);
 	my $b = unpack('C', $buf); # $b is now the decimal value of the byte
 #	print sprintf("Address 0x%X: 0x%X\n", $address, $b);
 
