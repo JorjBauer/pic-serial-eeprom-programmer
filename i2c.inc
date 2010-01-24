@@ -1,10 +1,11 @@
 ;;; I2C routines.
 ;;;
-;;; These macros/functions (written for the ds1307) work on an 8MHz
-;;; clock without problems. It's not clear whether they will have
-;;; problems or not at a higher clock speed, but certainly they'll
-;;; work slower without issues. See ds1307-i2c.asm for sample usage.
-;;; -- Jorj, 3/12/2009
+;;; These macros/functions were originally written for the DS1307 with an 
+;;; 8MHz clock. They subsequently went to a 20MHz clock and a ds1307, and then 
+;;; were backported to a 4MHz clock and serial EEProms. With the latest 
+;;; revision, they support clock stretching appropriately and should be 
+;;; generic enough that I2CDELAY needs to be tuned for fast clocks (but 
+;;; nothing else).
 ;;;
 ;;; These must be defined by the caller:
 ;;;   SCL <port>,<pin>
@@ -17,10 +18,11 @@
 ;;;   I2C_TIMER_1
 
 ;;; Note 6/2/2009: This code uses this macro to delay at critical times. 
-;;; It's not clear how much of a delay is req'd, but this delay is good enough
-;;; to defeat the capacitance of two devices on the bus when using a 20MHz
-;;; pic. It's also not clear which calls to this must stay and which are 
-;;; overkill. Some day, perform analysis and find out?
+;;; It's not clear how much of a delay is req'd, but the long version of
+;;; this delay is good enough to defeat the capacitance of two devices
+;;; on the bus when using a 20MHz pic.
+;;; The short version of this (two 'nop' calls) is sufficient for the serial 
+;;; eeproms that I have.
 
 I2CDELAY	MACRO
 #if 0
@@ -29,7 +31,7 @@ I2CDELAY	MACRO
 	goto	$-1
 #else
 	nop
-	nop
+;;	nop
 #endif
 	ENDM
 

@@ -99,7 +99,7 @@ init_serial:
 	;;    57600: 1.7126 (not tested, seems unlikely to work)
 	
 	bsf	TXSTA, BRGH	; high-speed mode if 'bsf'; low-speed for 'bcf'
-	movlw	d'26'		; 'X', per above comments, to set baud rate
+	movlw	d'12'		; 'X', per above comments, to set baud rate
 	movwf	SPBRG
 
 	bcf	TXSTA, CSRC	; unimportant

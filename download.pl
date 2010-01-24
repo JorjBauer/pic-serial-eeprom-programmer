@@ -27,7 +27,7 @@ my $port = Device::SerialPort->new($dev, $quiet, undef)
 $port->user_msg(1);
 $port->error_msg(1);
 $port->databits(8);
-$port->baudrate(9600);
+$port->baudrate(19200);
 $port->parity("none");
 $port->stopbits(1);
 $port->handshake("none");
@@ -40,7 +40,8 @@ my $hshake = $port->handshake;
 print "$baud ${data}/${parity}/${stop} handshake: $hshake\n";
 
 #do_destructive_test($port);
-do_download($port, "out.bin");
+#do_download($port, "out.bin");
+do_fast_download($port, "out.bin");
 #do_write($port, "file.bin");
 #do_verify($port, "file.bin");
 #do_fast_verify($port, "file.bin");
@@ -192,6 +193,39 @@ sub do_fast_verify {
     }
     print "fast-verify complete\n";
 }
+
+sub do_fast_download {
+    my ($p, $file) = @_;
+    print "Fast downloading...\n";
+
+    my $fh;
+    open($fh, ">", $file) || die "Unable to open $file: $!";
+
+    $p->purge_all();
+
+    # Send a 'read all' command for 0x8000 bytes
+    my $len = 0x8000;
+    die "Failed to write '>R'"
+	unless ($p->write('>R' . chr($len & 0xFF) . chr($len >> 8)) == 4);
+
+    my $ret = read_byte($p);
+    die "Test failed ('$ret' instead of 'R')"
+	unless ($ret eq 'R');
+
+
+    my $address = 0;
+    while ($address < $len) {
+	if ($address % 256 == 0) {
+	    print ".";
+	}
+	my $ret = read_byte($p);
+	print $fh $ret;
+	$address++;
+    }
+    print "\nfast-read complete\n";
+    close $fh;
+}
+
 
 sub do_download {
     my ($p, $file) = @_;
