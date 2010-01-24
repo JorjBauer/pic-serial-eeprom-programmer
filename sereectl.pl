@@ -5,46 +5,47 @@ use warnings;
 use Device::SerialPort;
 use Fcntl;
 use Carp;
-
-#############################
-# NOTES:
-#   fast_verify doesn't work.
-#
-#
-#############################
-
+use Getopt::Std;
 
 $|=1;
 
-#my $dev = "/dev/tty.usbserial";
-my $dev = "/dev/tty.KeySerial1";
-#my $dev = "/dev/tty.PL2303-0000101D";
+our ($opt_d, $opt_r, $opt_R, $opt_h, $opt_f, $opt_q, $opt_t, $opt_w, $opt_v, $opt_V);
+
+getopts('d:hf:qrRtwvV');
+
+# Must have a serial port.
+usage() if ($opt_h || !$opt_d);
+
+# Can't mix download and upload operations
+usage() if ( ($opt_r || $opt_R) && ($opt_w) );
+
+# Can't mix selftest with other modes
+usage() if ($opt_t && ($opt_r || $opt_R || $opt_w || $opt_v || $opt_V));
+
+# download and fast download together don't make sense
+usage() if ($opt_r && $opt_R);
 
 # Set up the serial port
-my $quiet = 1;
-my $port = Device::SerialPort->new($dev, $quiet, undef)
-    || die "Unable to open serial port";
-$port->user_msg(1);
-$port->error_msg(1);
-$port->databits(8);
-$port->baudrate(19200);
-$port->parity("none");
-$port->stopbits(1);
-$port->handshake("none");
+my $port = open_serial();
 
-my $baud = $port->baudrate;
-my $parity = $port->parity;
-my $data = $port->databits;
-my $stop = $port->stopbits;
-my $hshake = $port->handshake;
-print "$baud ${data}/${parity}/${stop} handshake: $hshake\n";
-
-#do_destructive_test($port);
-#do_download($port, "out.bin");
-do_fast_download($port, "out.bin");
-#do_write($port, "file.bin");
-#do_verify($port, "file.bin");
-#do_fast_verify($port, "file.bin");
+if ($opt_t) {
+    do_destructive_test($port);
+}
+if ($opt_r) {
+    do_download($port, $opt_f);
+}
+if ($opt_R) {
+    do_fast_download($port, $opt_f);
+}
+if ($opt_w) {
+    do_write($port, $opt_f);
+}
+if ($opt_v) {
+    do_verify($port, $opt_f);
+}
+if ($opt_V) {
+    do_fast_verify($port, $opt_f);
+}
 
 $port->write_drain();
 $port->close();
@@ -76,7 +77,7 @@ sub do_write {
     my ($p, $file) = @_;
 
     my $fh;
-    open($fh, "file.bin") || die "Unable to open $file: $!";
+    open($fh, $file) || die "Unable to open $file: $!";
 
     $p->purge_all();
 
@@ -154,7 +155,7 @@ sub do_fast_verify {
     my ($p, $file) = @_;
 
     my $fh;
-    open($fh, "file.bin") || die "Unable to open $file: $!";
+    open($fh, $file) || die "Unable to open $file: $!";
 
     $p->purge_all();
 
@@ -266,7 +267,7 @@ sub do_verify {
     print "Verifying...\n";
 
     my $fh;
-    open($fh, "file.bin") || die "Unable to open $file: $!";
+    open($fh, $file) || die "Unable to open $file: $!";
 
     $p->purge_all();
 
@@ -293,3 +294,47 @@ sub do_verify {
     }
 }
 
+sub open_serial {
+    my $port = Device::SerialPort->new($opt_d, $opt_q ? 1 : 0, undef)
+	|| die "Unable to open serial port";
+    $port->user_msg(1);
+    $port->error_msg(1);
+    $port->databits(8);
+    $port->baudrate(19200);
+    $port->parity("none");
+    $port->stopbits(1);
+    $port->handshake("none");
+    
+    my $baud = $port->baudrate;
+    my $parity = $port->parity;
+    my $data = $port->databits;
+    my $stop = $port->stopbits;
+    my $hshake = $port->handshake;
+    print "$baud ${data}/${parity}/${stop} handshake: $hshake\n"
+	unless ($opt_q);
+    return $port;
+}
+
+sub usage {
+    print "At least a serial port and one action must be specified.\n\n";
+
+    print $0, "\n";
+    print "\t-h            this help message\n\n";
+    print "\t-d <device>   serial port to use\n";
+    print "\t-q            open serial port quietly\n";
+    print "\t-f <file>     file argument for action commands\n";
+    print "\n";
+    print "\t-r            download (read) from EEPROM to specified file\n";
+    print "\t-R            fast download (read) from EEPROM to specified file\n";
+    print "\t-t            perform destructive self-test\n";
+    print "\t-w            write specified file to EEPROM\n";
+    print "\t-v            verify that EEPROM contains contents of file\n";
+    print "\t-V            fast verify that EEPROM contains contents of file\n";
+    print "\n";
+    print "Read and verify operations may be specified together, but\n";
+    print "may not be mixed with write. The self-test operation may\n";
+    print "only be specified by itself; this runs the EEPROM programmer's\n";
+    print "built-in self test, which overwrites part of the EEPROM.\n";
+    print "\n";
+    exit(-1);
+}
